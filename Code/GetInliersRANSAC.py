@@ -47,15 +47,15 @@ def getInliers(pts1, pts2, idx):
 
                 error = errorF(pts1[j, :], pts2[j, :], f_8)
                 
-                if error < error_thresh:
+                if error < error_thresh: #WJ: inliers
                     indices.append(idx[j])
 
-        if len(indices) > inliers_thresh:
+        if len(indices) > inliers_thresh: #WJ: get the best F with the max # of inliers
             inliers_thresh = len(indices)
             chosen_indices = indices
             chosen_f = f_8
 
-    return chosen_f, chosen_indices
+    return chosen_f, chosen_indices #WJ: chosen_indices is those inliers
 
 
 

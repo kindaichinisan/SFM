@@ -112,6 +112,7 @@ def main():
     R_set, C_set = ExtractCameraPose(E12)
 
     idx = np.where(filtered_feature_flag[:,n] & filtered_feature_flag[:,m])
+    #WJ:pts1 and pts2 are camera 0 and 1 inlier pts
     pts1 = np.hstack((feature_x[idx, n].reshape((-1, 1)), feature_y[idx, n].reshape((-1, 1))))
     pts2 = np.hstack((feature_x[idx, m].reshape((-1, 1)), feature_y[idx, m].reshape((-1, 1))))
 
@@ -119,7 +120,7 @@ def main():
     C1_ = np.zeros((3,1))
     I = np.identity(3)
     pts3D_4 = []
-    for i in range(len(C_set)):
+    for i in range(len(C_set)): #4
         pts3D = []
         x1 = pts1
         x2 = pts2
@@ -157,12 +158,12 @@ def main():
     camera_indices = np.zeros((feature_x.shape[0], 1), dtype = int) 
     X_found = np.zeros((feature_x.shape[0], 1), dtype = int)
 
-    X_all[idx] = X[:, :3]
+    X_all[idx] = X[:, :3] #WJ: for all 3D pts X b4 NL triangulation
     X_found[idx] = 1
     camera_indices[idx] = 1
 
     # print(np.nonzero(X_found[idx])[0].shape)
-    X_found[np.where(X_all[:,2] < 0)] = 0
+    X_found[np.where(X_all[:,2] < 0)] = 0 #WJ: if Z is less than 0, set to 0
     # print(len(idx[0]), '--' ,np.nonzero(X_found[idx])[0].shape)
 
     C_set_ = []
@@ -185,15 +186,15 @@ def main():
         #for chart
 
         print('Registering Image: ', str(i+1) ,'......')
-        feature_idx_i = np.where(X_found[:, 0] & filtered_feature_flag[:, i])
-        if len(feature_idx_i[0]) < 8:
+        feature_idx_i = np.where(X_found[:, 0] & filtered_feature_flag[:, i]) #WJ: camera0/1 pts matched with camera2 pts.
+        if len(feature_idx_i[0]) < 8: #WJ: if less than 8 pts, cannot do
             print("Found ", len(feature_idx_i), "common points between X and ", i, " image")
             continue
 
         pts_i = np.hstack((feature_x[feature_idx_i, i].reshape(-1,1), feature_y[feature_idx_i, i].reshape(-1,1)))
-        X = X_all[feature_idx_i, :].reshape(-1,3)
+        X = X_all[feature_idx_i, :].reshape(-1,3) #WJ: camera0/1 pts matched with camera2 pts. 3D pts
         #PnP
-        R_init, C_init = PnPRANSAC(K, pts_i, X, n_iterations = 1000, error_thresh = 5)
+        R_init, C_init = PnPRANSAC(K, pts_i, X, n_iterations = 1000, error_thresh = 5) #WJ: use new camera (x,y) to get estimate of R and C
         errorLinearPnP = reprojectionErrorPnP(X, pts_i, K, R_init, C_init)
         
         Ri, Ci = NonLinearPnP(K, pts_i, X, R_init, C_init)
@@ -207,9 +208,9 @@ def main():
         R_set_.append(Ri)
 
         #trianglulation
-        for j in range(0, i):
+        for j in range(0, i): #WJ: for prev cameras
             # idx_X_pts = np.where(X_found[:, 0] & filtered_feature_flag[:, j] & filtered_feature_flag[:, i])
-            idx_X_pts = np.where(filtered_feature_flag[:, j] & filtered_feature_flag[:, i])
+            idx_X_pts = np.where(filtered_feature_flag[:, j] & filtered_feature_flag[:, i]) #WJ: pts matched of prev cam with cur cam
             if (len(idx_X_pts[0]) < 8):
                 continue
 
@@ -239,8 +240,10 @@ def main():
             print( 'Performing Bundle Adjustment  for image : ', i  )
             R_set_, C_set_, X_all = BundleAdjustment(X_all,X_found, feature_x, feature_y,
                                                      filtered_feature_flag, R_set_, C_set_, K, nCam = i)
-           
-        
+
+            C_set_ = [[item[0] for item in sublist] for sublist in C_set_]
+
+
             for k in range(0, i+1):
                 idx_X_pts = np.where(X_found[:,0] & filtered_feature_flag[:, k])
                 x = np.hstack((feature_x[idx_X_pts, k].reshape((-1, 1)), feature_y[idx_X_pts, k].reshape((-1, 1))))
